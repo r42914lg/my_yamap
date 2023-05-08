@@ -22,6 +22,10 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 31
+
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+        resValue "string", "api_key", properties.getProperty("yandex.maps.apikey", "")
     }
 }
 
