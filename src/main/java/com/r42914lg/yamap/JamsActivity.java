@@ -1,7 +1,14 @@
 package com.r42914lg.yamap;
 
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.yandex.mapkit.MapKitFactory;
@@ -9,9 +16,13 @@ import com.yandex.mapkit.geometry.Point;
 import com.yandex.mapkit.map.CameraPosition;
 import com.yandex.mapkit.mapview.MapView;
 import com.yandex.mapkit.traffic.TrafficLayer;
+
 import android.graphics.BitmapFactory;
 import android.view.View;
 import android.widget.ImageButton;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 
 import com.yandex.mapkit.traffic.TrafficLevel;
 import com.yandex.mapkit.traffic.TrafficListener;
@@ -20,11 +31,21 @@ public class JamsActivity extends Activity implements TrafficListener {
     private TextView levelText;
     private ImageButton levelIcon;
     private TrafficLevel trafficLevel = null;
-    private enum TrafficFreshness {Loading, OK, Expired};
+
+    private enum TrafficFreshness {Loading, OK, Expired}
+
+    ;
     private TrafficFreshness trafficFreshness;
     private MapView mapView;
     private TrafficLayer traffic;
 
+    private final LocationListener locationListener = location -> {
+        double longitude = location.getLongitude();
+        double latitude = location.getLatitude();
+
+        mapView.getMap().move(
+                new CameraPosition(new Point(latitude, longitude), 14.0f, 0.0f, 0.0f));
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +62,36 @@ public class JamsActivity extends Activity implements TrafficListener {
         traffic.setTrafficVisible(true);
         traffic.addTrafficListener(this);
         updateLevel();
+
+        getCoordinates();
+    }
+
+    private void getCoordinates() {
+        LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, new String[] {
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+            }, 0);
+
+            return;
+        }
+
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        for (int grantResult : grantResults)
+            if (requestCode != 0 || grantResult != PERMISSION_GRANTED)
+                finish();
+
+        getCoordinates();
     }
 
     @Override
